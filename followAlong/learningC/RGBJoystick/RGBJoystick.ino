@@ -10,18 +10,37 @@ void setup()
   pinMode(10, OUTPUT);
   pinMode(11, OUTPUT);
   
-  //pinMode(2, INPUT_PULLUP);
+  pinMode(2, INPUT_PULLUP);
   
 }
 
 void loop()
 {
-  red();
+/*   red();
   delay(1000);
   green();
   delay(1000);
   off();
-  delay(1000);
+  delay(1000); */
+
+  rPot = analogRead(0);
+  Serial.print(" R=");
+  Serial.print(rPot);
+  
+  bPot = analogRead(1);
+  Serial.print(" B=");
+  Serial.println(bPot);
+
+  if (digitalRead(2)) {
+    rgb(rPot/4, 0, bPot/4);
+  } else {
+    off();
+  }
+  
+  
+  delay(500);
+
+
 }
 
 void rgb(int r, int g, int b) {
