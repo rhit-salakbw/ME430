@@ -2,5 +2,5 @@
     "configuration": "cpu=atmega2560",
     "board": "arduino:avr:mega",
     "port": "COM3",
-    "sketch": "Labs\\transistorHbridgeMotor\\stepperPartK\\stepperPartK.ino"
+    "sketch": "followAlong\\MATLAB App Designer\\Arduino\\communicationLab\\communicationLab.ino"
 }
