@@ -25,6 +25,10 @@
 #define BIT_PB_COUNT 4
 
 volatile uint16_t isrCount = 0; // or else compiler will try to optomize to 0 and not variable 
+volatile uint8_t mainEventFlag = 0;
+#define PB_FLAG 0x01
+
+//bool isButtonPressed = false;
 
 void setup()
 {
@@ -57,6 +61,14 @@ void loop()
     Serial.println(String("Counter = ") + isrCount);
     delay(500);
   }
+
+  if (mainEventFlag & PB_FLAG){
+    delay(30);
+    if(bit_is_clear(REG_PIN_PB_COUNT, BIT_PB_COUNT)){
+    isrCount++;
+    }
+    mainEventFlag &= ~PB_FLAG;
+  }
   
   //delay(10); // Delay a little bit to improve simulation performance
 }
@@ -70,9 +82,6 @@ ISR(INT0_vect){//weird func (more like macro), in documentation somewhere
 
 // for mega
 ISR(INT4_vect){//weird func (more like macro), in documentation somewhere
-delay(20);
-if(bit_is_clear(REG_PIN_PB_COUNT, BIT_PB_COUNT)){
-    isrCount++;
-}
+    mainEventFlag |= PB_FLAG;
     //delay(50); //debounce fix? -> no
 }
