@@ -33,37 +33,136 @@
     double azPrime;
     double sinHA;
     double az;
+
+    int currState = 1;
+    int prevState = 0;
+
+//constant definiton
+#define PREVBUTTON 22
+#define NEXTBUTTON 24
+#define CWBUTTON 26
+#define CCWBUTTON 28
+
 void setup() {
-    Serial.begin(9600);
+    //open serial
+        Serial.begin(9600);
+    //define 4 buttons for menu navigation 
+        //back
+        pinMode(PREVBUTTON, INPUT_PULLUP);
+        //next
+        pinMode(NEXTBUTTON, INPUT_PULLUP);
+        //cw - clockwise
+        pinMode(CWBUTTON, INPUT_PULLUP);
+        //ccw - counter clockwise 
+        pinMode(CCWBUTTON, INPUT_PULLUP);
+}
+
+void loop() {
+    if (currState != prevState){
+        Serial.print("state = ");
+        Serial.println(currState);
+    }       
+    stateMachine();
+
+}
+
+void stateMachine(){
+    prevState = currState;
+    switch (currState) {
+        case 1: //start screen
+            if (digitalRead(NEXTBUTTON) == 0){
+                currState = 2;
+                delay(500);
+            }
+        break;
+
+        case 2: //observatory define
+            if (digitalRead(PREVBUTTON) == 0){ //go back to start screen
+                currState = 1;
+                delay(500);
+            } else if (digitalRead(CWBUTTON) == 0){ //go to automatic calibration
+                currState = 3;
+                delay(500);
+            } else if (digitalRead(CCWBUTTON) == 0){ //go to manual calibration step 1 
+                currState = 4;
+                delay(500);
+            }
+        break;
+        
+        case 3: //automatic observatory
+            //this will go automatically once sequence is complete
+            if (digitalRead(PREVBUTTON) == 0){ //go back to observatory define
+                currState = 2;
+                delay(500);
+            }
+        break;
+
+        case 4: //enter time
+            if (digitalRead(PREVBUTTON) == 0){ //go back to observatory define
+                currState = 2;
+                delay(500);
+            } else if (digitalRead(NEXTBUTTON) == 0){ //go to longditude entry
+                currState = 5;
+                delay(500);   
+            } 
+        break;
+
+        case 5: //enter longditude 
+            if (digitalRead(PREVBUTTON) == 0){ //go back to time entry
+                currState = 4;
+                delay(500);
+            } else if (digitalRead(NEXTBUTTON) == 0){ //go to latitude entry
+                currState = 6;
+                delay(500);   
+            }
+        break;
+
+        case 6: //enter latitude
+            if (digitalRead(PREVBUTTON) == 0){ //go back to longditude entry
+                currState = 5;
+                delay(500);
+            } else if (digitalRead(NEXTBUTTON) == 0){ //go to alignment sequence
+                currState = 7;
+                delay(500);  
+            } 
+        break;
+
+        case 7: //alignment sequence 
+        break;
+
+
+    }
+}
+void calcAltAz() {
 // INPUTS
     //
     // UT INPUTS
     //
     // NOTE: this assumes no daylight savings time
-        UTDay = 22;
-        UTMonth = 4;
-        UTYear = 1980;
+        UTDay = 19;
+        UTMonth = 7;
+        UTYear = 2022;
         //
-        UTHour = 18;
-        UTMinute = 36;
-        UTSecond = 51.76;
+        UTHour = 3;
+        UTMinute = 6;
+        UTSecond = 00;
     //
     // GPS CORD INPUT
     //
     // NOTE: assumes E longditudes as positive and W longditudes as negative 
-        geoLongDeg = -64; // eventually will need ported to format DDDMM.MMMM
-        geoLatDeg = 52;
+        geoLongDeg = 94; // eventually will need ported to format DDDMM.MMMM
+        geoLatDeg = 39;
     //
     // CELESTIAL OBJECT INPUT
     //
     // NOTE: assume each parameter entered individually - this might have to change
-        RAHour = 18;
-        RAMin = 32;
-        RASec = 21;
+        RAHour = 6;
+        RAMin = 00;
+        RASec = 00;
         //
-        DECHour = 23;
-        DECMin = 13;
-        DECSec = 10;
+        DECHour = -16;
+        DECMin = 00;
+        DECSec = 00;
 // Step 1: Convert right ascension to hour angle
     // subtask 1: UT and Greenwich (Julian Calender Date)
         UT = UTHour + UTMinute / 60 + UTSecond / 3600;
@@ -71,6 +170,8 @@ void setup() {
         jD = j0 + UT / 24;
         Serial.print("UT [hour decimal] ");
         Serial.println(String(UT));
+        Serial.print("Julian Date [hour decimal] ");
+        Serial.println(String(jD));
     // subtask 2: Greenwich sidereal time
         t0 = (j0 - 2451545) / 36525;
         thetaG0 = 100.4606184 + 36000.77004 * t0 + .000387933 * pow(t0, 2) - 2.583 * pow(10, -8) * pow(t0, 3);
@@ -162,6 +263,5 @@ void setup() {
 
 
 }
-// need to look into variable renaming the units got really messy and need refavtored beacuse I actually know wtf is going on now RA and DEC are measured in diff units that are actually the ~same~
-void loop() {
-}
+// need to look into variable renaming the units got really messy and need refavtored beacuse I actually know wtf is going on now 
+//RA and DEC are measured in diff units that are actually the ~same~
