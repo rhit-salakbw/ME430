@@ -1,5 +1,9 @@
 // This will be the framework for the code that will determine how the arm moves
-// Variable Definition
+//library inclusion
+    #include <Key.h>
+    #include <Keypad.h>
+    #include <LiquidCrystal.h>
+//Variable Definition
     double UTDay;
     double UTMonth;
     double UTYear;
@@ -37,15 +41,42 @@
     int currState = 1;
     int prevState = 0;
 
+
 //constant definiton
 #define PREVBUTTON 22
 #define NEXTBUTTON 24
 #define CWBUTTON 26
 #define CCWBUTTON 28
 
+//define keypad
+    //constants for row/col
+    #define ROWS 4
+    #define COLS 4
+    //arduino connections
+    byte rowPins[ROWS] = {22, 24, 26, 28};
+    byte colPins[COLS] = {30, 32, 34, 36};
+
+    //array to represent keyboard
+    char hexaKeys[ROWS][COLS] = {
+        {'1', '2', '3', 'A'},
+        {'4', '5', '6', 'B'},
+        {'7', '8', '9', 'C'},
+        {'*', '0', '#', 'D'}
+    };
+
+    //create keypad object
+    Keypad inputKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
+
+//define LCD
+    LiquidCrystal menuLCD(42, 44, 46, 48, 50, 52);
+
+
 void setup() {
     //open serial
         Serial.begin(9600);
+    //LCD housekeeping
+        menuLCD.begin(16, 2); // Set up the number of columns and rows on the LCD.
+        menuLCD.clear();
     //define 4 buttons for menu navigation 
         //back
         pinMode(PREVBUTTON, INPUT_PULLUP);
@@ -68,66 +99,114 @@ void loop() {
 
 void stateMachine(){
     prevState = currState;
+    char inputKey = inputKeypad.getKey();
     switch (currState) {
-        case 1: //start screen
-            if (digitalRead(NEXTBUTTON) == 0){
+        case 1: //start screen    
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("SkyFinder BWS");
+            menuLCD.setCursor(0, 1);
+            menuLCD.print("A = adv B = bck");
+            if (inputKey == 'A'){
                 currState = 2;
+                inputKey = ' ';
+                menuLCD.clear();
                 delay(500);
             }
+
         break;
 
         case 2: //observatory define
-            if (digitalRead(PREVBUTTON) == 0){ //go back to start screen
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("Obs Sel C = auto");
+            menuLCD.setCursor(0, 1);
+            menuLCD.print("Obs Sel D = man");
+            if (inputKey == 'B'){ //go back to start screen
                 currState = 1;
+                inputKey = ' ';
+                menuLCD.clear();
                 delay(500);
-            } else if (digitalRead(CWBUTTON) == 0){ //go to automatic calibration
+            } else if (inputKey == 'C'){ //go to automatic calibration
                 currState = 3;
+                inputKey = ' ';
+                menuLCD.clear();
                 delay(500);
-            } else if (digitalRead(CCWBUTTON) == 0){ //go to manual calibration step 1 
+            } else if (inputKey == 'D'){ //go to manual calibration step 1 
                 currState = 4;
+                inputKey = ' ';
+                menuLCD.clear();
                 delay(500);
             }
         break;
         
         case 3: //automatic observatory
             //this will go automatically once sequence is complete
-            if (digitalRead(PREVBUTTON) == 0){ //go back to observatory define
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("auto Obs");
+            if (inputKey == 'B'){ //go back to observatory define
                 currState = 2;
+                inputKey = ' ';
+                menuLCD.clear();
                 delay(500);
             }
         break;
 
         case 4: //enter time
-            if (digitalRead(PREVBUTTON) == 0){ //go back to observatory define
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("entr UT time");
+            if (inputKey == 'B'){ //go back to observatory define
                 currState = 2;
+                inputKey = ' ';
+                menuLCD.clear();
                 delay(500);
-            } else if (digitalRead(NEXTBUTTON) == 0){ //go to longditude entry
+            } else if (inputKey == 'A'){ //go to longditude entry
                 currState = 5;
+                inputKey = ' ';
+                menuLCD.clear();
                 delay(500);   
             } 
         break;
 
-        case 5: //enter longditude 
-            if (digitalRead(PREVBUTTON) == 0){ //go back to time entry
+        case 5: //enter longditude
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("long DDDMM.MMMM");
+            if (inputKey == 'B'){ //go back to time entry
                 currState = 4;
+                inputKey = ' ';
+                menuLCD.clear();
                 delay(500);
-            } else if (digitalRead(NEXTBUTTON) == 0){ //go to latitude entry
+            } else if (inputKey == 'A'){ //go to latitude entry
                 currState = 6;
+                inputKey = ' ';
+                menuLCD.clear();
                 delay(500);   
             }
         break;
 
         case 6: //enter latitude
-            if (digitalRead(PREVBUTTON) == 0){ //go back to longditude entry
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("lat DDMM.MMMM");        
+            if (inputKey == 'B'){ //go back to longditude entry
                 currState = 5;
+                inputKey = ' ';
+                menuLCD.clear();
                 delay(500);
-            } else if (digitalRead(NEXTBUTTON) == 0){ //go to alignment sequence
+            } else if (inputKey == 'A'){ //go to alignment sequence
                 currState = 7;
+                inputKey = ' ';
+                menuLCD.clear();
                 delay(500);  
             } 
         break;
 
         case 7: //alignment sequence 
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("align seq");       
+            if (inputKey == 'B'){ //go back to observatory select
+                currState = 2;
+                inputKey = ' ';
+                menuLCD.clear();
+                delay(500);
+            }
         break;
 
 
