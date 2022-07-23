@@ -3,6 +3,16 @@
     #include <Key.h>
     #include <Keypad.h>
     #include <LiquidCrystal.h>
+//constant definiton
+    #define PREVBUTTON 22
+    #define NEXTBUTTON 24
+    #define CWBUTTON 26
+    #define CCWBUTTON 28
+    #define ROWS 4
+    #define COLS 4
+    #define manTimeLength 13
+    #define manLongLength 10
+    #define manLatLength 9
 //Variable Definition
     double UTDay;
     double UTMonth;
@@ -38,20 +48,22 @@
     double sinHA;
     double az;
 
+    char manTime[manTimeLength];
+    int manTimeCount = 0;
+    bool timeBlit = false;
+
+    char manLong[manLongLength];
+    int manLongCount = 0;
+    bool longBlit = false;
+
+    char manLat[manLatLength];
+    int manLatCount = 0;
+    bool latBlit = false;
+
     int currState = 1;
     int prevState = 0;
 
-
-//constant definiton
-#define PREVBUTTON 22
-#define NEXTBUTTON 24
-#define CWBUTTON 26
-#define CCWBUTTON 28
-
 //define keypad
-    //constants for row/col
-    #define ROWS 4
-    #define COLS 4
     //arduino connections
     byte rowPins[ROWS] = {22, 24, 26, 28};
     byte colPins[COLS] = {30, 32, 34, 36};
@@ -77,15 +89,6 @@ void setup() {
     //LCD housekeeping
         menuLCD.begin(16, 2); // Set up the number of columns and rows on the LCD.
         menuLCD.clear();
-    //define 4 buttons for menu navigation 
-        //back
-        pinMode(PREVBUTTON, INPUT_PULLUP);
-        //next
-        pinMode(NEXTBUTTON, INPUT_PULLUP);
-        //cw - clockwise
-        pinMode(CWBUTTON, INPUT_PULLUP);
-        //ccw - counter clockwise 
-        pinMode(CCWBUTTON, INPUT_PULLUP);
 }
 
 void loop() {
@@ -134,6 +137,9 @@ void stateMachine(){
                 currState = 4;
                 inputKey = ' ';
                 menuLCD.clear();
+                // define needed values
+                manTimeCount = 0;
+                timeBlit = false;
                 delay(500);
             }
         break;
@@ -151,19 +157,62 @@ void stateMachine(){
         break;
 
         case 4: //enter time
+
             menuLCD.setCursor(0, 0);
-            menuLCD.print("entr UT time");
+            menuLCD.print("entrMMDDYYYYHHMM");
+
             if (inputKey == 'B'){ //go back to observatory define
                 currState = 2;
                 inputKey = ' ';
                 menuLCD.clear();
+                // clear what was written and reset 
+                manTimeCount = 0;
+                timeBlit = false;
                 delay(500);
             } else if (inputKey == 'A'){ //go to longditude entry
                 currState = 5;
                 inputKey = ' ';
                 menuLCD.clear();
+                // clear what was written and reset 
+                manLongCount = 0;
+                longBlit = false;
                 delay(500);   
-            } 
+            } else if (inputKey){
+                manTime[manTimeCount] = inputKey;
+                menuLCD.setCursor(manTimeCount, 1);
+                menuLCD.print(manTime[manTimeCount]);
+                manTimeCount++;
+            }
+
+            if(manTimeCount == manTimeLength - 1 && !timeBlit){
+                menuLCD.setCursor(0, 1);
+                String month = "";
+                month.concat(manTime[0]);
+                month.concat(manTime[1]);
+                String day = "" ;
+                day.concat(manTime[2]);
+                day.concat(manTime[3]);                
+                String year = "";
+                year.concat(manTime[4]);
+                year.concat(manTime[5]); 
+                year.concat(manTime[6]);
+                year.concat(manTime[7]); 
+                String hour = "";
+                hour.concat(manTime[8]);
+                hour.concat(manTime[9]);
+                String minute = "";
+                minute.concat(manTime[10]);
+                minute.concat(manTime[11]);                
+                UTMonth = month.toDouble();
+                UTDay = day.toDouble();
+                UTYear = year.toDouble();
+                UTHour = hour.toDouble();
+                UTMinute = minute.toDouble();
+                UTSecond = 0;
+                menuLCD.print(month + '/' + day + '/' + year + ' ' + hour + ':' + minute);
+                timeBlit = true;
+
+            }
         break;
 
         case 5: //enter longditude
@@ -173,12 +222,44 @@ void stateMachine(){
                 currState = 4;
                 inputKey = ' ';
                 menuLCD.clear();
+                manTimeCount = 0;
+                timeBlit = false;
                 delay(500);
             } else if (inputKey == 'A'){ //go to latitude entry
                 currState = 6;
                 inputKey = ' ';
                 menuLCD.clear();
+                manLatCount = 0;
+                latBlit = false;
                 delay(500);   
+            } else if (inputKey){
+                manLong[manLongCount] = inputKey;
+                menuLCD.setCursor(manLongCount, 1);
+                menuLCD.print(manLong[manLongCount]);
+                manLongCount++;
+            }
+
+            if(manLongCount == manLongLength - 1 && !longBlit){
+                menuLCD.setCursor(0, 1);
+                String degreeLong = "";
+                degreeLong.concat(manLong[0]);
+                degreeLong.concat(manLong[1]);
+                degreeLong.concat(manLong[2]);
+                String minuteLong = "" ;
+                minuteLong.concat(manLong[3]);
+                minuteLong.concat(manLong[4]);                
+                String secondLong = "."; // technical decimal mintues so seconds out of 100...
+                secondLong.concat(manLong[5]);
+                secondLong.concat(manLong[6]);
+                secondLong.concat(manLong[7]);
+                secondLong.concat(manLong[8]);              
+                geoLongDeg = degreeLong.toDouble() + minuteLong.toDouble()/60 + secondLong.toDouble()/60;
+                menuLCD.clear();
+                menuLCD.setCursor(0, 0);
+                menuLCD.print("long DDDMM.MMMM");
+                menuLCD.setCursor(0, 1);
+                menuLCD.print(geoLongDeg);
+                longBlit = true;
             }
         break;
 
@@ -189,13 +270,44 @@ void stateMachine(){
                 currState = 5;
                 inputKey = ' ';
                 menuLCD.clear();
+                manLongCount = 0;
+                longBlit = false;
                 delay(500);
             } else if (inputKey == 'A'){ //go to alignment sequence
                 currState = 7;
                 inputKey = ' ';
                 menuLCD.clear();
+                manLatCount = 0;
+                latBlit = false;
                 delay(500);  
-            } 
+            } else if (inputKey){
+                manLat[manLatCount] = inputKey;
+                menuLCD.setCursor(manLatCount, 1);
+                menuLCD.print(manLat[manLatCount]);
+                manLatCount++;
+            }
+
+            if(manLatCount == manLatLength - 1 && !latBlit){
+                menuLCD.setCursor(0, 1);
+                String degreeLat = "";
+                degreeLat.concat(manLat[0]);
+                degreeLat.concat(manLat[1]);
+                String minuteLat = "" ;
+                minuteLat.concat(manLat[2]);
+                minuteLat.concat(manLat[3]);                
+                String secondLat = "."; // technical decimal mintues so seconds out of 100...
+                secondLat.concat(manLat[4]);
+                secondLat.concat(manLat[5]);
+                secondLat.concat(manLat[6]);
+                secondLat.concat(manLat[7]);              
+                geoLatDeg = degreeLat.toDouble() + minuteLat.toDouble()/60 + secondLat.toDouble()/60;
+                menuLCD.clear();
+                menuLCD.setCursor(0, 0);
+                menuLCD.print("lat DDMM.MMMM");
+                menuLCD.setCursor(0, 1);
+                menuLCD.print(geoLatDeg);
+                latBlit = true;
+            }
         break;
 
         case 7: //alignment sequence 
@@ -205,6 +317,12 @@ void stateMachine(){
                 currState = 2;
                 inputKey = ' ';
                 menuLCD.clear();
+                manTimeCount = 0;
+                timeBlit = false;
+                manLongCount = 0;
+                longBlit = false;
+                manLatCount = 0;
+                latBlit = false;                
                 delay(500);
             }
         break;
