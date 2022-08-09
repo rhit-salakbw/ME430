@@ -93,6 +93,6 @@ void loop() {
   Serial.print(" \tZ: "); Serial.print(event.magnetic.z); 
   Serial.println(" uTesla ");
 
-  delay(100); 
+  delay(1000); 
   Serial.println();
 }

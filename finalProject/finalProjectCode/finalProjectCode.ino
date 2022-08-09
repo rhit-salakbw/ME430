@@ -1,8 +1,11 @@
+
 // This will be the framework for the code that will determine how the arm moves
 //library inclusion
     #include <Key.h>
     #include <Keypad.h>
     #include <LiquidCrystal.h>
+    #include <AccelStepper.h>
+    #include <MultiStepper.h>
 //constant definiton
     #define PREVBUTTON 22
     #define NEXTBUTTON 24
@@ -13,6 +16,18 @@
     #define manTimeLength 13
     #define manLongLength 10
     #define manLatLength 9
+
+    #define stpAz 7
+    #define dirAz 8
+    #define MS1Az 9
+    #define MS2Az 10
+    #define ENAz  11
+
+    #define stpAlt 2
+    #define dirAlt 3
+    #define MS1Alt 4
+    #define MS2Alt 5
+    #define ENAlt  6
 //Variable Definition
     double UTDay;
     double UTMonth;
@@ -82,6 +97,9 @@
 //define LCD
     LiquidCrystal menuLCD(42, 44, 46, 48, 50, 52);
 
+//define steppers
+    AccelStepper stepperAz(AccelStepper::DRIVER, stpAz, dirAz); // step, direction
+    AccelStepper stepperAlt(AccelStepper::DRIVER, stpAlt, dirAlt); // step, direction
 
 void setup() {
     //open serial
@@ -89,6 +107,24 @@ void setup() {
     //LCD housekeeping
         menuLCD.begin(16, 2); // Set up the number of columns and rows on the LCD.
         menuLCD.clear();
+    //Motor Setup
+      pinMode(MS1Az, OUTPUT);
+      pinMode(MS2Az, OUTPUT);
+      pinMode(ENAz, OUTPUT);
+      digitalWrite(ENAz, LOW); //Pull enable pin low to allow motor control
+      digitalWrite(MS1Az, HIGH); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
+      digitalWrite(MS2Az, HIGH);
+      stepperAz.setMaxSpeed(1500);
+      stepperAz.setAcceleration(500);
+
+      pinMode(MS1Alt, OUTPUT);
+      pinMode(MS2Alt, OUTPUT);
+      pinMode(ENAlt, OUTPUT);
+      digitalWrite(ENAlt, LOW); //Pull enable pin low to allow motor control
+      digitalWrite(MS1Alt, HIGH); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
+      digitalWrite(MS2Alt, HIGH);
+      stepperAlt.setMaxSpeed(1500);
+      stepperAlt.setAcceleration(500);
 }
 
 void loop() {
@@ -313,6 +349,8 @@ void stateMachine(){
         case 7: //alignment sequence 
             menuLCD.setCursor(0, 0);
             menuLCD.print("align seq");       
+            menuLCD.setCursor(0, 1);
+            menuLCD.print("C = auto D = man");    
             if (inputKey == 'B'){ //go back to observatory select
                 currState = 2;
                 inputKey = ' ';
@@ -324,10 +362,120 @@ void stateMachine(){
                 manLatCount = 0;
                 latBlit = false;                
                 delay(500);
+            } else if (inputKey == 'C'){ //go to auto align 1 
+                currState = 8;
+                inputKey = ' ';
+
+            } else if (inputKey == 'D'){ //go to manual align 1
+                digitalWrite(ENAz, HIGH); //allow az movement by hand 
+                inputKey = ' ';
+                menuLCD.clear();
+                currState = 10;
             }
         break;
 
+        case 8: // auto align 1 
+            if (inputKey == 'B'){ //go back to alignment sequence
+                currState = 7;
+            }
+        break;
 
+        case 9: // auto align 2 
+            if (inputKey == 'B'){ //go back to alignment sequence
+                currState = 7;
+            }
+        break;
+
+        case 10: // manual align 1 
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("man Az Align"); 
+            if (inputKey == 'B'){ //go back to alignment sequence 
+                currState = 7;
+                inputKey = ' ';
+            } else if (inputKey == 'A'){ // go to manual align 2
+                digitalWrite(ENAz, LOW); //lock motor
+                stepperAz.setCurrentPosition(0); // write new zero position to servo 
+                digitalWrite(ENAlt, HIGH); //allow az movement by hand
+                inputKey = ' ';
+                menuLCD.clear();
+                currState = 11; 
+                delay(500);
+            }
+        break;
+
+        case 11: // manual align 2 
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("man Alt Align");
+            if (inputKey == 'B'){ //go back to manual align 1 
+                currState = 10;
+            } else if (inputKey == 'A'){ //go to object define
+                digitalWrite(ENAlt, LOW); //lock motor
+                stepperAz.setCurrentPosition(0); // write new zero position to servo 
+                inputKey = ' ';
+                menuLCD.clear();
+                currState = 12;
+                delay(500);
+            }
+        break;
+
+        case 12: // object define 
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("object define");
+            if (inputKey == 'B'){ //go back to alignment sequence 
+                currState = 7;
+            }
+        break;
+
+        case 13: //indv object 1
+            if (inputKey == 'B'){ //go back to object define
+                currState = 12;
+            } else if (inputKey == 'A'){ //go to indv object 2
+                currState = 14;
+            }
+        break;
+
+        case 14: // ind object 2
+            if (inputKey == 'B'){ //go back to indv object 1
+                currState = 13;
+            } else if (inputKey == 'A'){ //go to calc alt az 
+                currState = 16;
+            }        
+        break;
+
+        case 15: // multiple obj
+            // I think for this I will use a text file and have it just parse it and move with user defined delays inbetween each object 
+        break;
+
+        case 16: // calc alt ax 
+            if (inputKey == 'B'){ //go back to object define
+                currState = 12;
+            } else if (inputKey == 'A'){ //go to pre slew confirmation 
+                currState = 17;
+            }        
+        break;
+
+        case 17: //pre slew confirmation
+            if (inputKey == 'B'){ //go back to calc alt az 
+                currState = 16;
+            } else if (inputKey == 'A'){ //go to initial slew 
+                currState = 18;
+            }          
+        break;
+ 
+        case 18: //initial slew 
+            if (inputKey == 'B'){ //go back to pre slew confirmation
+                currState = 17;
+            } else if (inputKey == 'A'){ //go to looping slew  
+                currState = 19;
+            }         
+        break;
+
+        case 19: //looping slew 
+            if (inputKey == 'B'){ //go back to pre slew confirmation
+                currState = 17;
+            } 
+            // recall and re slew motors every X seconds 
+        break;
     }
 }
 void calcAltAz() {
