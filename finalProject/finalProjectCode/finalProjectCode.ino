@@ -16,6 +16,8 @@
     #define manTimeLength 13
     #define manLongLength 10
     #define manLatLength 9
+    #define manRALength 6
+    #define manDECLength 6
 
     #define stpAz 7
     #define dirAz 8
@@ -45,16 +47,16 @@
     double geoLongDeg;
     double thetaSDeg;
     double thetaSHA;
-    double RAHour;
-    double RAMin;
-    double RASec;
-    double RAHA;
+    //double RAHour;
+    //double RAMin;
+    //double RASec;
+    //double RAHA;
     double HourAngleDeg;
     double HourAngleHA;
-    double DECHour;
-    double DECMin;
-    double DECSec;
-    double DECDeg;
+    //double DECHour;
+    //double DECMin;
+    //double DECSec;
+    //double DECDeg;
     double geoLatDeg;
     double sinAlt;
     double alt;
@@ -62,6 +64,12 @@
     double azPrime;
     double sinHA;
     double az;
+
+    double degreeRA;
+    double degreeDEC;
+
+    double* slewPos;
+    bool initRun = false;
 
     char manTime[manTimeLength];
     int manTimeCount = 0;
@@ -74,6 +82,16 @@
     char manLat[manLatLength];
     int manLatCount = 0;
     bool latBlit = false;
+
+    char manRA[manRALength];
+    int manRACount = 0;
+    bool RABlit = false;
+    int RASign = 1;
+
+    char manDEC[manDECLength];
+    int manDECCount = 0;
+    bool DECBlit = false;
+    int DECSign = 1;
 
     int currState = 1;
     int prevState = 0;
@@ -364,6 +382,7 @@ void stateMachine(){
                 delay(500);
             } else if (inputKey == 'C'){ //go to auto align 1 
                 currState = 8;
+                menuLCD.clear();
                 inputKey = ' ';
 
             } else if (inputKey == 'D'){ //go to manual align 1
@@ -376,12 +395,17 @@ void stateMachine(){
 
         case 8: // auto align 1 
             if (inputKey == 'B'){ //go back to alignment sequence
+                inputKey = ' ';
+                menuLCD.clear();
                 currState = 7;
+                
             }
         break;
 
         case 9: // auto align 2 
             if (inputKey == 'B'){ //go back to alignment sequence
+                inputKey = ' ';
+                menuLCD.clear();
                 currState = 7;
             }
         break;
@@ -390,8 +414,9 @@ void stateMachine(){
             menuLCD.setCursor(0, 0);
             menuLCD.print("man Az Align"); 
             if (inputKey == 'B'){ //go back to alignment sequence 
-                currState = 7;
                 inputKey = ' ';
+                menuLCD.clear();
+                currState = 7;
             } else if (inputKey == 'A'){ // go to manual align 2
                 digitalWrite(ENAz, LOW); //lock motor
                 stepperAz.setCurrentPosition(0); // write new zero position to servo 
@@ -407,6 +432,8 @@ void stateMachine(){
             menuLCD.setCursor(0, 0);
             menuLCD.print("man Alt Align");
             if (inputKey == 'B'){ //go back to manual align 1 
+                inputKey = ' ';
+                menuLCD.clear();
                 currState = 10;
             } else if (inputKey == 'A'){ //go to object define
                 digitalWrite(ENAlt, LOW); //lock motor
@@ -421,24 +448,103 @@ void stateMachine(){
         case 12: // object define 
             menuLCD.setCursor(0, 0);
             menuLCD.print("object define");
+            menuLCD.setCursor(0, 1);
+            menuLCD.print("C = ind D = mult");
             if (inputKey == 'B'){ //go back to alignment sequence 
+                inputKey = ' ';
+                menuLCD.clear();
                 currState = 7;
+            } else if (inputKey == 'C'){ //go to indv object 1 
+                inputKey = ' ';
+                menuLCD.clear();
+                currState = 13;
             }
         break;
 
+
         case 13: //indv object 1
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("Entr RA XXX.XX");
             if (inputKey == 'B'){ //go back to object define
+                inputKey = ' ';
+                menuLCD.clear();
+                manRACount = 0;
+                RABlit = false;
                 currState = 12;
             } else if (inputKey == 'A'){ //go to indv object 2
+                inputKey = ' ';
+                menuLCD.clear();
+                manRACount = 0;
+                RABlit = false;
                 currState = 14;
+            }else if (inputKey == '*'){
+                RASign = -1; // way to add negative sign 
+            } else if(inputKey) {
+                manRA[manRACount] = inputKey;
+                menuLCD.setCursor(manRACount, 1);
+                menuLCD.print(manRA[manRACount]);
+                manRACount++;
+            }
+
+            if(manRACount == manRALength - 1 && !RABlit){
+                menuLCD.setCursor(0, 1);
+                String wholeRA = "";
+                wholeRA.concat(manRA[0]);
+                wholeRA.concat(manRA[1]);
+                wholeRA.concat(manRA[2]);
+                String decimalRA = "" ;
+                decimalRA.concat(manRA[3]);
+                decimalRA.concat(manRA[4]);                            
+                degreeRA = (wholeRA.toDouble() + decimalRA.toDouble()/100)*RASign ;
+                menuLCD.clear();
+                menuLCD.setCursor(0, 0);
+                menuLCD.print("Entr RA XXX.XX");
+                menuLCD.setCursor(0, 1);
+                menuLCD.print(degreeRA);
+                RABlit = true;
             }
         break;
 
         case 14: // ind object 2
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("Entr DEC XXX.XX");
             if (inputKey == 'B'){ //go back to indv object 1
+                inputKey = ' ';
+                menuLCD.clear();
+                manDECCount = 0;
+                DECBlit = false; 
                 currState = 13;
             } else if (inputKey == 'A'){ //go to calc alt az 
-                currState = 16;
+                inputKey = ' ';
+                menuLCD.clear();
+                manDECCount = 0;
+                DECBlit = false;                
+                currState = 16; 
+            } else if (inputKey == '*'){
+                DECSign = -1;            
+            } else if (inputKey){
+                manDEC[manDECCount] = inputKey;
+                menuLCD.setCursor(manDECCount, 1);
+                menuLCD.print(manDEC[manDECCount]);
+                manDECCount++;
+            }
+
+            if(manDECCount == manDECLength - 1 && !DECBlit){
+                menuLCD.setCursor(0, 1);
+                String wholeDEC = "";
+                wholeDEC.concat(manDEC[0]);
+                wholeDEC.concat(manDEC[1]);
+                wholeDEC.concat(manDEC[2]);
+                String decimalDEC = "" ;
+                decimalDEC.concat(manDEC[3]);
+                decimalDEC.concat(manDEC[4]);                            
+                degreeDEC = (wholeDEC.toDouble() + decimalDEC.toDouble()/100)*DECSign; ;
+                menuLCD.clear();
+                menuLCD.setCursor(0, 0);
+                menuLCD.print("Entr DEC XXX.XX");
+                menuLCD.setCursor(0, 1);
+                menuLCD.print(degreeDEC);
+                DECBlit = true;
             }        
         break;
 
@@ -447,67 +553,101 @@ void stateMachine(){
         break;
 
         case 16: // calc alt ax 
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("Calc Init Pos");
+
             if (inputKey == 'B'){ //go back to object define
+                inputKey = ' ';
+                menuLCD.clear();
                 currState = 12;
             } else if (inputKey == 'A'){ //go to pre slew confirmation 
+                inputKey = ' ';
+                menuLCD.clear();
                 currState = 17;
-            }        
+            } 
+            if(!initRun){
+                calcAltAz(UTDay, UTMonth, UTYear, UTHour, UTMinute, UTSecond, geoLongDeg, geoLatDeg, degreeRA, degreeDEC);   
+                Serial.println("calculated values returned to main");
+                Serial.println(alt);
+                Serial.println(az);
+                initRun = true;
+            }
+
         break;
 
         case 17: //pre slew confirmation
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("Conf Init Slew");
             if (inputKey == 'B'){ //go back to calc alt az 
+                inputKey = ' ';
+                menuLCD.clear();
                 currState = 16;
             } else if (inputKey == 'A'){ //go to initial slew 
+                inputKey = ' ';
+                menuLCD.clear();
                 currState = 18;
             }          
         break;
  
         case 18: //initial slew 
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("Init Slewing");
+
             if (inputKey == 'B'){ //go back to pre slew confirmation
+                inputKey = ' ';
+                menuLCD.clear();
                 currState = 17;
             } else if (inputKey == 'A'){ //go to looping slew  
+                inputKey = ' ';
+                menuLCD.clear();
                 currState = 19;
             }         
         break;
 
         case 19: //looping slew 
-            if (inputKey == 'B'){ //go back to pre slew confirmation
+            menuLCD.setCursor(0, 0);
+            menuLCD.print("Loop Slew");
+            if (inputKey == 'B'){ //go back to pre slew confirmation'
+                inputKey = ' ';
+                menuLCD.clear();
                 currState = 17;
             } 
             // recall and re slew motors every X seconds 
         break;
     }
 }
-void calcAltAz() {
+void  calcAltAz(double UTDay, double UTMonth, double UTYear, double UTHour, double UTMinute, double UTSecond, double geoLongDeg, double geoLatDeg, double RAHA, double DECDeg) {
 // INPUTS
     //
     // UT INPUTS
     //
     // NOTE: this assumes no daylight savings time
-        UTDay = 19;
-        UTMonth = 7;
-        UTYear = 2022;
+        //UTDay = 19;
+        //UTMonth = 7;
+        //UTYear = 2022;
         //
-        UTHour = 3;
-        UTMinute = 6;
-        UTSecond = 00;
+        //UTHour = 3;
+        //UTMinute = 6;
+        //UTSecond = 00;
     //
     // GPS CORD INPUT
     //
     // NOTE: assumes E longditudes as positive and W longditudes as negative 
-        geoLongDeg = 94; // eventually will need ported to format DDDMM.MMMM
-        geoLatDeg = 39;
+        //geoLongDeg = 94; // eventually will need ported to format DDDMM.MMMM
+        //geoLatDeg = 39;
     //
     // CELESTIAL OBJECT INPUT
     //
     // NOTE: assume each parameter entered individually - this might have to change
-        RAHour = 6;
-        RAMin = 00;
-        RASec = 00;
+
+        //RAHour = 6;
+        //RAMin = 00;
+        //RASec = 00;
         //
-        DECHour = -16;
-        DECMin = 00;
-        DECSec = 00;
+
+        //DECHour = -16;
+        //DECMin = 00;
+        //DECSec = 00;
 // Step 1: Convert right ascension to hour angle
     // subtask 1: UT and Greenwich (Julian Calender Date)
         UT = UTHour + UTMinute / 60 + UTSecond / 3600;
@@ -554,7 +694,7 @@ void calcAltAz() {
         thetaSHA = (thetaSDeg*24)/360;
         Serial.println(String(thetaSHA));
     // subtask 4: express right asension in decimal hours
-        RAHA = RAHour + RAMin / 60 + RASec / 3600;
+        //RAHA = RAHour + RAMin / 60 + RASec / 3600;
         Serial.print("Right Ascension [hour decimal] ");
         Serial.println(String(RAHA));
     // subtask 5: calculate hour angle 
@@ -575,7 +715,7 @@ void calcAltAz() {
         //HourAngleHA = 5.862;
         //HourAngleDeg = 87.97;
     // subtask 2: convert dec into degrees
-        DECDeg = DECHour + DECMin / 60 + DECSec / 3600;
+        //DECDeg = DECHour + DECMin / 60 + DECSec / 3600;
         Serial.print("Declination Angle [degrees] ");  
         Serial.println(String(DECDeg)); 
     // subtask 3: calculate sin(a) a = altitude 
@@ -605,8 +745,6 @@ void calcAltAz() {
         Serial.print("azimuth [degrees] ");  
         Serial.println(String(az)); 
     // report values
-
-
 }
 // need to look into variable renaming the units got really messy and need refavtored beacuse I actually know wtf is going on now 
 //RA and DEC are measured in diff units that are actually the ~same~
