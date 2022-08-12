@@ -93,6 +93,9 @@
     bool DECBlit = false;
     int DECSign = 1;
 
+    int azStep;
+    int altStep;
+
     int currState = 1;
     int prevState = 0;
 
@@ -578,6 +581,9 @@ void stateMachine(){
         case 17: //pre slew confirmation
             menuLCD.setCursor(0, 0);
             menuLCD.print("Conf Init Slew");
+            menuLCD.setCursor(0, 1);
+            menuLCD.print("az:" + String((int) az) + " " + "alt:" + String((int) alt));
+            
             if (inputKey == 'B'){ //go back to calc alt az 
                 inputKey = ' ';
                 menuLCD.clear();
@@ -592,6 +598,15 @@ void stateMachine(){
         case 18: //initial slew 
             menuLCD.setCursor(0, 0);
             menuLCD.print("Init Slewing");
+            // ok so 200 steps per rev at 1/8 micro step is 1600 steps/ 360 deg 
+            // therfore 1 deg is 4.44 steps
+            azStep = 4.44*az;
+            stepperAz.moveTo(azStep);
+            stepperAz.run();
+
+            altStep = 4.44*alt;
+            stepperAlt.moveTo(altStep);
+            stepperAlt.run();
 
             if (inputKey == 'B'){ //go back to pre slew confirmation
                 inputKey = ' ';
